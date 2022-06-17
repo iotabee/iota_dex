@@ -51,6 +51,13 @@ func InitRouter() *gin.Engine {
 		order.GET("/coin/cancel", CancelPendingCoinOrder)
 		order.GET("/coin/list", GetCoinOrders)
 		order.GET("/coin/info", GetCoinOrder)
+
+		order.GET("/liquidity/add", LiquidityAddOrder)
+		order.GET("/liquidity/remove", LiquidityRemoveOrder)
+		order.GET("/liquidity/pending", GetPendingLiquidityOrder)
+		order.GET("/liquidity/cancel", CancelPendingLiquidityOrder)
+		order.GET("/liquidity/list", GetLiquidityOrders)
+		order.GET("/liquidity/info", GetLiquidityOrder)
 	}
 
 	return router
