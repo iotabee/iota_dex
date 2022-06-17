@@ -387,19 +387,3 @@ max count is 100
 |1|sige error|
 |2|params error|
 |3|system error|
-
-{
-	"env":"dev",
-	"http_port":8080,
-	"db": {
-		"lifetime": 30,
-		"openconns": 200,
-		"idleconns": 100,
-		"host": "",
-		"port": "3306",
-		"dbname": "iota_dex",
-		"usr": "root",
-		"pwd": "851012"
-	},
-	"token_time":7200
-}
