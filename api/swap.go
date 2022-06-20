@@ -39,7 +39,7 @@ func SwapOrder(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
-			"err_msg":  "amount or min_amount params error.",
+			"err_msg":  "amount or min_amount params error",
 		})
 		gl.OutLogger.Error("amount or min_amount params error. %s, %s, %s", amount, min_amount, to)
 		return
@@ -49,7 +49,7 @@ func SwapOrder(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
-			"err_msg":  "maybe you have a swap order is pending.",
+			"err_msg":  "maybe you have a swap order is pending",
 		})
 		gl.OutLogger.Error("Insert into db error(swap_order_pending). %s, %v", c.GetString("account"), err)
 		return

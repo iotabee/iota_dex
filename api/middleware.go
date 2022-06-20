@@ -28,7 +28,7 @@ func VerifySignature(c *gin.Context) {
 		return
 	}
 	timeStamp, _ := strconv.ParseInt(ts, 10, 64)
-	sigPublicKey, err := crypto.Ecrecover(hash.Bytes(), signature)
+	sigPublicKey, err := crypto.SigToPub(hash.Bytes(), signature)
 	if (err != nil) || (timeStamp+config.TokenTime < time.Now().Unix()) {
 		c.Abort()
 		c.JSON(http.StatusOK, gin.H{
@@ -38,6 +38,6 @@ func VerifySignature(c *gin.Context) {
 		})
 		return
 	}
-	c.Set("account", hexutil.Encode(sigPublicKey))
+	c.Set("account", crypto.PubkeyToAddress(*sigPublicKey).Hex())
 	c.Next()
 }

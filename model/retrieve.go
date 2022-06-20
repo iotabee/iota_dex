@@ -73,9 +73,11 @@ func GetRetrieveOrder(id int64) (RetrieveOrder, error) {
 
 func GetRetrieveOrders(account string, count int) ([]RetrieveOrder, error) {
 	rows, err := db.Query("select `id`,`account`,`to`,`coin`,`amount`,`state`,`o_time`,`e_time` from retrieve_order where `account`=? order by id desc limit ?", account, count)
+	if err != nil {
+		return nil, err
+	}
 
 	os := make([]RetrieveOrder, 0)
-
 	for rows.Next() {
 		o := RetrieveOrder{}
 		if err = rows.Scan(&o.Id, &o.Account, &o.To, &o.Coin, &o.Amount, &o.State, &o.OrderTime, &o.EndTime); err != nil {

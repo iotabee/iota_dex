@@ -1,6 +1,11 @@
+# api address
+```
+    https://api.iotabee.com
+```
+
 # public api
 
-## GET /pairs
+## GET /public/pairs
 ### respose
 ```json
 {
@@ -26,7 +31,7 @@
 }
 ```
 
-## GET /price?coin1={1}&coin2={2}
+## GET /public/price?coin1={1}&coin2={2}
 ### respose
 ```json
 {
@@ -36,7 +41,7 @@
 }
 ```
 
-## GET /balance?account={1}
+## GET /public/balance?account={1}
 ### respose
 ```json
 {
@@ -48,38 +53,21 @@
 }
 ```
 
-## GET /market/swap/list?count={10} 
-### request params
-```
-max count is 100
-```
-### respose
-```json
-{
-    "result":true,
-    "data":[{
-        "id":1,
-        "from_address":"",
-        "from_coin":"coin name",
-        "from_amount":1,
-        "to_address":"",
-        "to_coin":"coin name",
-        "to_amount":2,
-        "end_time":1654418290,
-    }]
-}
-```
 
 # sign api
 
 ## A example for sign data with the private key
 ```go
     privateKey, err := crypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
-	data := []byte("19152") //total days since 1970.01.01 00:00:00
-	hash := crypto.Keccak256Hash(data) //0xb2572721d4d9b79d1f7678b68da3265dfc42dbae0ce0603cc17e3af26f5deb51
+	data := []byte("1655714635") //
+	hash := crypto.Keccak256Hash(data)
 	signature, err := crypto.Sign(hash.Bytes(), privateKey)
 	sign := hexutil.Encode(signature)
-	//0x76007ce42c2cfd60f5689ea17179ea8cf3df8050c582fe0a0df9de36afcba4026cfe2bfe09012629db451a8abcddfa3fb0fc327c37402c73c6b133526a19b2fc01
+	//0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab90c50e402037b99577f3469af5e1d507b3b9a00a23b3f2ee603c826a27cd30e58e9c9a00
+```
+Everyone private api must add the ts and sign params.
+```
+ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab90c50e402037b99577f3469af5e1d507b3b9a00a23b3f2ee603c826a27cd30e58e9c9a00
 ```
 
 ## GET /order/swap

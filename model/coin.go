@@ -56,7 +56,7 @@ func MovePendingCoinOrderToCancel(address string) error {
 		tx.Rollback()
 		return errors.New("have no coin_order_pending")
 	}
-	if _, err := tx.Exec("INSERT INTO `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`stata`,`o_time`) VALUES(?,?,?,?,?,?,?)", o.Account, o.Address, o.Coin, o.Amount, o.Direction, 4, o.OrderTime); err != nil {
+	if _, err := tx.Exec("INSERT INTO `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,?,?,?)", o.Account, o.Address, o.Coin, o.Amount, o.Direction, 4, o.OrderTime); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -74,10 +74,12 @@ func GetCoinOrder(id int64) (CoinOrder, error) {
 }
 
 func GetCoinOrders(address string, count int) ([]CoinOrder, error) {
-	rows, err := db.Query("select `id`,`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`,`e_time` from collect_order where `address`=? or account=? order by id desc limit ?", address, address, count)
+	rows, err := db.Query("select `id`,`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`,`e_time` from coin_order where `address`=? or account=? order by id desc limit ?", address, address, count)
+	if err != nil {
+		return nil, err
+	}
 
 	os := make([]CoinOrder, 0)
-
 	for rows.Next() {
 		o := CoinOrder{}
 		if err = rows.Scan(&o.Id, &o.Account, &o.Address, &o.Coin, &o.Amount, &o.Direction, &o.State, &o.OrderTime, &o.EndTime); err != nil {

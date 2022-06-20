@@ -12,7 +12,7 @@ import (
 
 func StartHttpServer() {
 	router := InitRouter()
-	router.Run(":" + strconv.Itoa(config.HttpPort))
+	go router.Run(":" + strconv.Itoa(config.HttpPort))
 }
 
 // InitRouter init the router
@@ -25,15 +25,15 @@ func InitRouter() *gin.Engine {
 		log.Panic("Create GinLogger file error. " + err.Error())
 	}
 
-	router := gin.New()
-	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{Output: GinLogger}), gin.Recovery())
-	router.SetTrustedProxies(nil)
+	api := gin.New()
+	api.Use(gin.LoggerWithConfig(gin.LoggerConfig{Output: GinLogger}), gin.Recovery())
+	api.SetTrustedProxies(nil)
 
-	api := router.Group("/api")
+	public := api.Group("/public")
 	{
-		api.GET("/pairs", GetPairs)
-		api.GET("/price", GetPrice)
-		api.GET("/balance", GetBalance)
+		public.GET("/pairs", GetPairs)
+		public.GET("/price", GetPrice)
+		public.GET("/balance", GetBalance)
 	}
 
 	order := api.Group("/order")
@@ -60,5 +60,5 @@ func InitRouter() *gin.Engine {
 		order.GET("/liquidity/info", GetLiquidityOrder)
 	}
 
-	return router
+	return api
 }
