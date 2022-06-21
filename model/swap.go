@@ -35,10 +35,6 @@ func GetPendingSwapOrder(account string) (SwapOrder, error) {
 }
 
 func MovePendingSwapOrderToCancel(account string) error {
-	o, err := GetPendingSwapOrder(account)
-	if err != nil {
-		return err
-	}
 	tx, err := db.Begin()
 	if err != nil {
 		if tx != nil {
@@ -46,6 +42,13 @@ func MovePendingSwapOrderToCancel(account string) error {
 		}
 		return err
 	}
+	row := tx.QueryRow("select `from_address`,`from_coin`,`from_amount`,`to_address`,`to_coin`,`min_amount`,`o_time` from swap_order_pending where `from_address`=? for update", account)
+	o := SwapOrder{State: 0}
+	if err := row.Scan(&o.FromAddr, &o.FromCoin, &o.FromAmount, &o.ToAddr, &o.ToCoin, &o.ToAmount, &o.OrderTime); err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	res, err := tx.Exec("delete from swap_order_pending where from_address=?", account)
 	if err != nil {
 		tx.Rollback()

@@ -33,10 +33,6 @@ func GetPendingCoinOrder(address string) (CoinOrder, error) {
 }
 
 func MovePendingCoinOrderToCancel(address string) error {
-	o, err := GetPendingCoinOrder(address)
-	if err != nil {
-		return err
-	}
 	tx, err := db.Begin()
 	if err != nil {
 		if tx != nil {
@@ -44,6 +40,14 @@ func MovePendingCoinOrderToCancel(address string) error {
 		}
 		return err
 	}
+
+	row := tx.QueryRow("select `account`,`address`,`coin`,`amount`,`direction`,`o_time` from coin_order_pending where `account`=? or `address`=? for update", address, address)
+	o := CoinOrder{}
+	if err := row.Scan(&o.Account, &o.Address, &o.Coin, &o.Amount, &o.Direction, &o.OrderTime); err != nil {
+		tx.Rollback()
+		return err
+	}
+
 	res, err := tx.Exec("delete from coin_order_pending where (direction=1 and address=?) or (direction=-1 and account=?)", address, address)
 	if err != nil {
 		tx.Rollback()

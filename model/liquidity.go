@@ -38,13 +38,6 @@ func GetPendingLiquidityOrder(account string) (LiquidityOrder, error) {
 }
 
 func MovePendingLiquidityOrderToCancel(account string) error {
-	o, err := GetPendingLiquidityOrder(account)
-	if err != nil {
-		return err
-	}
-	if o.Coin1 > o.Coin2 {
-		o.Coin1, o.Coin2 = o.Coin2, o.Coin1
-	}
 	tx, err := db.Begin()
 	if err != nil {
 		if tx != nil {
@@ -52,6 +45,21 @@ func MovePendingLiquidityOrderToCancel(account string) error {
 		}
 		return err
 	}
+
+	row := tx.QueryRow("select `account`,`coin`,`coin1`,`amount`,`direction`,`o_time` from liquidity_order_pending where `account`=? for update", account)
+	o := LiquidityOrder{}
+	if err := row.Scan(&o.Account, &o.Coin1, &o.Coin2, &o.Amount1, &o.Direction, &o.OrderTime); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if o.Direction == -1 {
+		o.Lp = o.Amount1
+		o.Amount1 = ""
+	}
+	if o.Coin1 > o.Coin2 {
+		o.Coin1, o.Coin2 = o.Coin2, o.Coin1
+	}
+
 	res, err := tx.Exec("delete from liquidity_order_pending where account=?", account)
 	if err != nil {
 		tx.Rollback()
