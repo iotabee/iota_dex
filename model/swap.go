@@ -1,9 +1,5 @@
 package model
 
-import (
-	"errors"
-)
-
 type SwapOrder struct {
 	Id         int64  `json:"id"`
 	FromAddr   string `json:"from_address"`
@@ -49,17 +45,9 @@ func MovePendingSwapOrderToCancel(account string) error {
 		return err
 	}
 
-	res, err := tx.Exec("delete from swap_order_pending where from_address=?", account)
-	if err != nil {
+	if _, err := tx.Exec("delete from swap_order_pending where from_address=?", account); err != nil {
 		tx.Rollback()
 		return err
-	}
-	if c, err := res.RowsAffected(); err != nil {
-		tx.Rollback()
-		return err
-	} else if c == 0 {
-		tx.Rollback()
-		return errors.New("have no swap_order_pending")
 	}
 	if _, err := tx.Exec("INSERT INTO `swap_order`(`from_address`,`from_coin`,`from_amount`,`to_address`,`to_coin`,`to_amount`,`state`,`o_time`) VALUES(?,?,?,?,?,?,?,?)", o.FromAddr, o.FromCoin, o.FromAmount, o.ToAddr, o.ToCoin, o.ToAmount, 4, o.OrderTime); err != nil {
 		tx.Rollback()

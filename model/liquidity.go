@@ -1,7 +1,5 @@
 package model
 
-import "errors"
-
 type LiquidityOrder struct {
 	Id        int64  `json:"id"`
 	Account   string `json:"account"`
@@ -60,17 +58,9 @@ func MovePendingLiquidityOrderToCancel(account string) error {
 		o.Coin1, o.Coin2 = o.Coin2, o.Coin1
 	}
 
-	res, err := tx.Exec("delete from liquidity_order_pending where account=?", account)
-	if err != nil {
+	if _, err := tx.Exec("delete from liquidity_order_pending where account=?", account); err != nil {
 		tx.Rollback()
 		return err
-	}
-	if c, err := res.RowsAffected(); err != nil {
-		tx.Rollback()
-		return err
-	} else if c == 0 {
-		tx.Rollback()
-		return errors.New("have no liquidity_order_pending")
 	}
 	if _, err := tx.Exec("INSERT INTO `liquidity_order`(`account`,`coin1`,`coin2`,`amount1`,`amount2`,`lp`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,?,?,?,?,?)", o.Account, o.Coin1, o.Coin2, o.Amount1, "", o.Lp, o.Direction, 4, o.OrderTime); err != nil {
 		tx.Rollback()
