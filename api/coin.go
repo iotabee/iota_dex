@@ -14,6 +14,7 @@ func CollectCoinOrder(c *gin.Context) {
 	coin := c.Query("coin")
 	amount := c.Query("amount")
 	account := c.Query("account")
+	address := c.GetString("account")
 
 	coin = strings.ToUpper(coin)
 	if len(coin) == 0 || len(account) == 0 || len(amount) == 0 {
@@ -26,13 +27,13 @@ func CollectCoinOrder(c *gin.Context) {
 		return
 	}
 
-	if err := model.InsertPendingCoinOrder(account, c.GetString("account"), coin, amount, 1); err != nil {
+	if err := model.InsertPendingCollectOrder(account, address, coin, amount); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
-			"err_msg":  "maybe you have a coin order is pending.",
+			"err_msg":  "maybe you have a collect order is pending.",
 		})
-		gl.OutLogger.Error("Insert into db error(coin_order_pending). %s, %s, %s, %s, %v", account, c.GetString("account"), coin, amount, err)
+		gl.OutLogger.Error("Insert into db error(collect_order_pending). %s, %s, %s, %s, %v", account, address, coin, amount, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -44,6 +45,7 @@ func RetrieveCoinOrder(c *gin.Context) {
 	to := c.Query("to")
 	coin := c.Query("coin")
 	amount := c.Query("amount")
+	account := c.GetString("account")
 
 	coin = strings.ToUpper(coin)
 	if len(coin) == 0 || len(to) == 0 || len(amount) == 0 {
@@ -56,13 +58,13 @@ func RetrieveCoinOrder(c *gin.Context) {
 		return
 	}
 
-	if err := model.InsertPendingCoinOrder(c.GetString("account"), to, coin, amount, -1); err != nil {
+	if err := model.RetrieveCoin(account, to, coin, amount); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
-			"err_msg":  "maybe you have a coin order is pending.",
+			"err_msg":  "maybe balance is not enough",
 		})
-		gl.OutLogger.Error("Insert into db error(coin_order_pending). %s, %s, %s, %s, %v", c.GetString("account"), to, coin, amount, err)
+		gl.OutLogger.Error("retriveve coin in db error. %s, %s, %s, %s, %v", account, to, coin, amount, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -70,16 +72,16 @@ func RetrieveCoinOrder(c *gin.Context) {
 	})
 }
 
-func CancelPendingCoinOrder(c *gin.Context) {
-	from := c.GetString("account")
-	err := model.MovePendingCoinOrderToCancel(from)
+func CancelPendingCollectOrder(c *gin.Context) {
+	address := c.GetString("account")
+	err := model.MovePendingCollectOrderToCancel(address)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.SYSTEM_ERROR,
 			"err_msg":  "have no pending coin order",
 		})
-		gl.OutLogger.Error("cancel pending_collect_order error. %s, %v", from, err)
+		gl.OutLogger.Error("cancel collect_order_pending error. %s, %v", address, err)
 		return
 	}
 
@@ -88,16 +90,16 @@ func CancelPendingCoinOrder(c *gin.Context) {
 	})
 }
 
-func GetPendingCoinOrder(c *gin.Context) {
-	from := c.GetString("account")
-	o, err := model.GetPendingCoinOrder(from)
+func GetPendingCollectOrder(c *gin.Context) {
+	address := c.GetString("account")
+	o, err := model.GetPendingCollectOrder(address)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.SYSTEM_ERROR,
-			"err_msg":  "have no pending coin order",
+			"err_msg":  "have no pending collect order",
 		})
-		gl.OutLogger.Error("get coin_order_pending error. %s, %v", from, err)
+		gl.OutLogger.Error("get collect_order_pending error. %s, %v", address, err)
 		return
 	}
 
@@ -108,19 +110,22 @@ func GetPendingCoinOrder(c *gin.Context) {
 }
 
 func GetCoinOrders(c *gin.Context) {
-	from := c.GetString("account")
+	address := c.GetString("account")
 	count, _ := strconv.Atoi(c.DefaultQuery("count", "5"))
 	if count == 0 {
 		count = 5
 	}
-	o, err := model.GetCoinOrders(from, count)
+	if count > 100 {
+		count = 100
+	}
+	o, err := model.GetCoinOrders(address, count)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.SYSTEM_ERROR,
 			"err_msg":  "have no coin orders",
 		})
-		gl.OutLogger.Error("get coin_order error. %s, %s, %v", from, c.Query("count"), err)
+		gl.OutLogger.Error("get coin_order error. %s, %s, %v", address, c.Query("count"), err)
 		return
 	}
 

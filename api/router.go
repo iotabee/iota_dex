@@ -47,8 +47,7 @@ func InitRouter() *gin.Engine {
 
 		order.GET("/coin/collect", CollectCoinOrder)
 		order.GET("/coin/retrieve", RetrieveCoinOrder)
-		order.GET("/coin/pending", GetPendingCoinOrder)
-		order.GET("/coin/cancel", CancelPendingCoinOrder)
+		order.GET("/coin/pending", GetPendingCollectOrder)
 		order.GET("/coin/list", GetCoinOrders)
 		order.GET("/coin/info", GetCoinOrder)
 

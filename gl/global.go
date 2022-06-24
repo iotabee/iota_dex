@@ -1,7 +1,6 @@
 package gl
 
 import (
-	//"hedgex-public/logger"
 	"log"
 	"os"
 
