@@ -53,8 +53,8 @@ func InitRouter() *gin.Engine {
 
 		order.GET("/liquidity/add", LiquidityAddOrder)
 		order.GET("/liquidity/remove", LiquidityRemoveOrder)
-		order.GET("/liquidity/pending", GetPendingLiquidityOrder)
-		order.GET("/liquidity/cancel", CancelPendingLiquidityOrder)
+		order.GET("/liquidity/pending", GetPendingLiquidityAddOrder)
+		order.GET("/liquidity/cancel", CancelPendingLiquidityAddOrder)
 		order.GET("/liquidity/list", GetLiquidityOrders)
 		order.GET("/liquidity/info", GetLiquidityOrder)
 	}
