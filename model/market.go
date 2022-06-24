@@ -8,10 +8,11 @@ type Coin struct {
 }
 
 type SwapPair struct {
-	Id      int             `json:"id"`
-	Coins   map[string]Coin `json:"coins"`
-	Lp      string          `json:"lp"`
-	FeeRate float32         `json:"fee_rate"`
+	Id          int             `json:"id"`
+	Coins       map[string]Coin `json:"coins"`
+	TotalSupply string          `json:"total_supply"`
+	FeeRate     float32         `json:"fee_rate"`
+	FeeScale    float32         `json:"fee_scale"`
 }
 
 func GetPairs() ([]SwapPair, error) {
@@ -27,7 +28,7 @@ func GetPairs() ([]SwapPair, error) {
 		coins[symbol] = c
 	}
 
-	rows, err = db.Query("select id,coin1,coin2,amount1,amount2,lp,fee_rate from swap_pair")
+	rows, err = db.Query("select id,coin1,coin2,reserve1,reserve2,total_supply,fee_rate,fee_scale from swap_pair")
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +38,7 @@ func GetPairs() ([]SwapPair, error) {
 		sp := SwapPair{}
 		sp.Coins = make(map[string]Coin)
 		var coin1, coin2, amount1, amount2 string
-		rows.Scan(&sp.Id, &coin1, &coin2, &amount1, &amount2, &sp.Lp, &sp.FeeRate)
+		rows.Scan(&sp.Id, &coin1, &coin2, &amount1, &amount2, &sp.TotalSupply, &sp.FeeRate, &sp.FeeScale)
 		if c, exist := coins[coin1]; exist {
 			c.Amount = amount1
 			sp.Coins[coin1] = c

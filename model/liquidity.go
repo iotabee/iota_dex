@@ -32,7 +32,7 @@ type LiquidityAddOrder struct {
 }
 
 func InsertPendingLiquidityAddOrder(account, coin1, coin2, amount1, amount2 string) error {
-	if _, err := db.Exec("insert into `liquidity_order_add_pending`(`account`,`coin1`,`coin2`,`amount1`,`amount2`) VALUES(?,?,?,?,?)", account, coin1, coin2, amount1, amount2); err != nil {
+	if _, err := db.Exec("insert into `liquidity_add_order_pending`(`account`,`coin1`,`coin2`,`amount1`,`amount2`) VALUES(?,?,?,?,?)", account, coin1, coin2, amount1, amount2); err != nil {
 		return err
 	}
 	return nil

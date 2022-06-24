@@ -16,11 +16,12 @@ type db struct {
 }
 
 var (
-	Env       string
-	Db        db
-	HttpPort  int
-	TokenTime int64 //seconds
-	SendCoins map[string]struct{}
+	Env           string
+	Db            db
+	HttpPort      int
+	TokenTime     int64 //seconds
+	SendCoins     map[string]struct{}
+	MaxQueryCount int
 )
 
 //Load load config file
@@ -31,11 +32,12 @@ func init() {
 	}
 	defer file.Close()
 	type Config struct {
-		Env       string   `json:"env"`
-		HttpPort  int      `json:"http_port"`
-		Db        db       `json:"db"`
-		TokenTime int64    `json:"token_time"`
-		SendCoins []string `json:"send_coin"`
+		Env           string   `json:"env"`
+		HttpPort      int      `json:"http_port"`
+		Db            db       `json:"db"`
+		TokenTime     int64    `json:"token_time"`
+		SendCoins     []string `json:"send_coin"`
+		MaxQueryCount int      `json:"max_query_count"`
 	}
 	all := &Config{}
 	if err = json.NewDecoder(file).Decode(all); err != nil {
@@ -49,4 +51,5 @@ func init() {
 	for _, coin := range all.SendCoins {
 		SendCoins[strings.ToUpper(coin)] = struct{}{}
 	}
+	MaxQueryCount = all.MaxQueryCount
 }

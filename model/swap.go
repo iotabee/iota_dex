@@ -32,7 +32,6 @@ func InsertPendingSwapOrder(fromAddr, fromCoin, fromAmount, toAddr, toCoin, minA
 
 func GetPendingSwapOrder(account string) (PendingSwapOrder, error) {
 	row := db.QueryRow("select `from_address`,`from_coin`,`from_amount`,`to_address`,`to_coin`,`min_amount`,`o_time` from swap_order_pending where `from_address`=?", account)
-
 	o := PendingSwapOrder{}
 	if err := row.Scan(&o.FromAddr, &o.FromCoin, &o.FromAmount, &o.ToAddr, &o.ToCoin, &o.MinAmount, &o.OrderTime); err != nil {
 		return o, err
@@ -70,7 +69,6 @@ func MovePendingSwapOrderToCancel(account string) error {
 
 func GetSwapOrder(id int64) (SwapOrder, error) {
 	row := db.QueryRow("select `id`,`from_address`,`from_coin`,`from_amount`,`to_address`,`to_coin`,`to_amount`,`state`,`o_time`,`e_time` from swap_order where id=?", id)
-
 	o := SwapOrder{}
 	if err := row.Scan(&o.Id, &o.FromAddr, &o.FromCoin, &o.FromAmount, &o.ToAddr, &o.ToCoin, &o.ToAmount, &o.State, &o.OrderTime, &o.EndTime); err != nil {
 		return o, err
@@ -83,7 +81,6 @@ func GetSwapOrders(account string, count int) ([]SwapOrder, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	os := make([]SwapOrder, 0)
 	for rows.Next() {
 		o := SwapOrder{}

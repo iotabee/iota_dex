@@ -3,6 +3,7 @@ package api
 import (
 	"iota_dex/gl"
 	"iota_dex/model"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,11 +17,11 @@ func LiquidityAddOrder(c *gin.Context) {
 	coin2 := strings.ToUpper(c.Query("coin2"))
 	amount1 := c.Query("amount1")
 	amount2 := c.Query("amount2")
-
 	if coin1 > coin2 {
 		coin1, coin2 = coin2, coin1
 		amount1, amount2 = amount2, amount1
 	}
+
 	if _, _, _, err := model.GetPrice(coin1, coin2); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
@@ -30,7 +31,10 @@ func LiquidityAddOrder(c *gin.Context) {
 		gl.OutLogger.Error("Get price when add liquidity order error. %s, %s, %v", coin1, coin2, err)
 		return
 	}
-	if len(amount1) == 0 || len(amount2) < 0 {
+
+	_, b1 := new(big.Int).SetString(amount1, 10)
+	_, b2 := new(big.Int).SetString(amount2, 10)
+	if !b1 || !b2 {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
@@ -46,9 +50,10 @@ func LiquidityAddOrder(c *gin.Context) {
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "maybe you have a liquidity add order is pending.",
 		})
-		gl.OutLogger.Error("Insert into db error(pending_liquidity_add_order). 1, %s, %s, %s, %s, %s, %v", account, coin1, coin2, amount1, amount2, err)
+		gl.OutLogger.Error("Insert into db error(liquidity_add_order_pending). %s, %s, %s, %s, %s, %v", account, coin1, coin2, amount1, amount2, err)
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"result": true,
 	})

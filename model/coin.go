@@ -5,14 +5,16 @@ import (
 	"math/big"
 )
 
+//PendingCollectOrder, collect coin order which is pending
 type PendingCollectOrder struct {
 	Account   string `json:"account"`
-	Address   string `json:"address"`
+	From      string `json:"from"`
 	Coin      string `json:"coin"`
 	Amount    string `json:"amount"`
 	OrderTime int    `json:"o_time"`
 }
 
+//CoinOrder, collect coin or retrieve coin order
 type CoinOrder struct {
 	Id        int64  `json:"id"`
 	Account   string `json:"account"`
@@ -25,13 +27,25 @@ type CoinOrder struct {
 	EndTime   int    `json:"e_time"`
 }
 
-func InsertPendingCollectOrder(account, address, coin, amount string) error {
-	if _, err := db.Exec("insert into `collect_order_pending`(`account`,`address`,`coin`,`amount`) VALUES(?,?,?,?)", account, address, coin, amount); err != nil {
+//InsertPendingCollectOrder, insert a collect_order_pending record to db.
+// @account : address that the coin to collect
+// @from 	: address which the coin from
+// @coin	: the coin type as string of upper
+// @amount	: amount that the coin to collect
+//@return	: nil if successful, or error if failed
+func InsertPendingCollectOrder(account, from, coin, amount string) error {
+	if _, err := db.Exec("insert into `collect_order_pending`(`account`,`from`,`coin`,`amount`) VALUES(?,?,?,?)", account, from, coin, amount); err != nil {
 		return err
 	}
 	return nil
 }
 
+//RetrieveCoin, retrieve coin from the account. Use transaction of db to deal the balance of account.
+// @account	: address that the coin to retrieve
+// @coin	: the coin type as string of upper
+// @amount	: amount that the coin to retrieve
+// @to		: address which the coin to send
+//@return	: nil if successful, or error if failed
 func RetrieveCoin(account, coin, amount, to string) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -41,25 +55,27 @@ func RetrieveCoin(account, coin, amount, to string) error {
 		return err
 	}
 
-	//get and judge the balance
+	//Get balance from db, and lock the 'balance' table
 	row := tx.QueryRow("select `amount` from balance where `account`=? and `coin`=? for update", account, coin)
-	var balance string
-	if err := row.Scan(&balance); err != nil {
+	var str string
+	if err := row.Scan(&str); err != nil {
 		tx.Rollback()
 		return err
 	}
-	balanceUser, b1 := new(big.Int).SetString(balance, 10)
-	a, b2 := new(big.Int).SetString(amount, 10)
-	if !b1 || !b2 || balanceUser.Cmp(a) < 0 {
+	balance, _ := new(big.Int).SetString(str, 10)
+	balanceRetrieve, _ := new(big.Int).SetString(amount, 10)
+	if balance.Cmp(balanceRetrieve) < 0 {
 		tx.Rollback()
-		return errors.New("balance is not enough : " + balance)
+		return errors.New("balance is not enough. " + str + " : " + amount)
 	}
 
-	if _, err := tx.Exec("update balance set amount=? where account=? and coin=?", balanceUser.Sub(balanceUser, a).String(), account, coin); err != nil {
+	//update the balance
+	if _, err := tx.Exec("update balance set amount=? where account=? and coin=?", balance.Sub(balance, balanceRetrieve).String(), account, coin); err != nil {
 		tx.Rollback()
 		return err
 	}
 
+	//insert a record to coin_order of db and get the id
 	var id int64
 	if res, err := db.Exec("insert into `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`) VALUES(?,?,?,?,-1,2)", account, to, coin, amount); err != nil {
 		tx.Rollback()
@@ -71,6 +87,7 @@ func RetrieveCoin(account, coin, amount, to string) error {
 		}
 	}
 
+	//insert a record to send_coin_pending of db, set link_id=id
 	if _, err := tx.Exec("insert into `send_coin_pending`(`link_id`,`to`,`coin`,`amount`,`type`) VALUES(?,?,?,?,2)", id, to, coin, amount); err != nil {
 		tx.Rollback()
 		return err
@@ -79,16 +96,19 @@ func RetrieveCoin(account, coin, amount, to string) error {
 	return tx.Commit()
 }
 
+//GetPendingCollectOrder, get the pending collect order from db
+// @address	: address of account or from
+//@return	: PendingCollectOrder as struct
 func GetPendingCollectOrder(address string) (PendingCollectOrder, error) {
-	row := db.QueryRow("select `account`,`address`,`coin`,`amount`,`o_time` from collect_order_pending where `account`=? or `address`=?", address, address)
-
+	row := db.QueryRow("select `account`,`from`,`coin`,`amount`,`o_time` from collect_order_pending where `account`=? or `from`=?", address, address)
 	o := PendingCollectOrder{}
-	if err := row.Scan(&o.Account, &o.Address, &o.Coin, &o.Amount, &o.OrderTime); err != nil {
+	if err := row.Scan(&o.Account, &o.From, &o.Coin, &o.Amount, &o.OrderTime); err != nil {
 		return o, err
 	}
 	return o, nil
 }
 
+//MovePendingCollectOrderToCancel, Cancel the pending collect order, move the record of collect_order_pending to coin_order table.
 func MovePendingCollectOrderToCancel(address string) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -98,19 +118,22 @@ func MovePendingCollectOrderToCancel(address string) error {
 		return err
 	}
 
-	row := tx.QueryRow("select `account`,`address`,`coin`,`amount`,`o_time` from collect_order_pending where `account`=? or `address`=? for update", address, address)
+	//query the pending collect order and lock the table
+	row := tx.QueryRow("select `account`,`from`,`coin`,`amount`,`o_time` from collect_order_pending where `account`=? or `from`=? for update", address, address)
 	o := PendingCollectOrder{}
-	if err := row.Scan(&o.Account, &o.Address, &o.Coin, &o.Amount, &o.OrderTime); err != nil {
+	if err := row.Scan(&o.Account, &o.From, &o.Coin, &o.Amount, &o.OrderTime); err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	if _, err := tx.Exec("delete from collect_order_pending where address=? or account=?", address, address); err != nil {
+	//delete the record of collect_order_pending.
+	if _, err := tx.Exec("delete from collect_order_pending where account=? or from", address, address); err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	if _, err := tx.Exec("insert into `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,1,4,?)", o.Account, o.Address, o.Coin, o.Amount, 1, 4, o.OrderTime); err != nil {
+	//add a record of coin_order
+	if _, err := tx.Exec("insert into `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,1,4,?)", o.Account, o.From, o.Coin, o.Amount, 1, 4, o.OrderTime); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -118,22 +141,12 @@ func MovePendingCollectOrderToCancel(address string) error {
 	return tx.Commit()
 }
 
-func GetCoinOrder(id int64) (CoinOrder, error) {
-	row := db.QueryRow("select `id`,`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`,`e_time` from coin_order where id=?", id)
-
-	o := CoinOrder{}
-	if err := row.Scan(&o.Id, &o.Account, &o.Address, &o.Coin, &o.Amount, &o.Direction, &o.State, &o.OrderTime, &o.EndTime); err != nil {
-		return o, err
-	}
-	return o, nil
-}
-
+//GetCoinOrders, the recent coin orders by the account or address
 func GetCoinOrders(address string, count int) ([]CoinOrder, error) {
 	rows, err := db.Query("select `id`,`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`,`e_time` from coin_order where `address`=? or account=? order by id desc limit ?", address, address, count)
 	if err != nil {
 		return nil, err
 	}
-
 	os := make([]CoinOrder, 0)
 	for rows.Next() {
 		o := CoinOrder{}
@@ -144,4 +157,14 @@ func GetCoinOrders(address string, count int) ([]CoinOrder, error) {
 	}
 
 	return os, err
+}
+
+//GetCoinOrder, the coin order with id.
+func GetCoinOrder(id int64) (CoinOrder, error) {
+	row := db.QueryRow("select `id`,`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`,`e_time` from coin_order where id=?", id)
+	o := CoinOrder{}
+	if err := row.Scan(&o.Id, &o.Account, &o.Address, &o.Coin, &o.Amount, &o.Direction, &o.State, &o.OrderTime, &o.EndTime); err != nil {
+		return o, err
+	}
+	return o, nil
 }

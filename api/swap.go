@@ -1,6 +1,7 @@
 package api
 
 import (
+	"iota_dex/config"
 	"iota_dex/gl"
 	"iota_dex/model"
 	"math/big"
@@ -17,6 +18,8 @@ func SwapOrder(c *gin.Context) {
 	to := c.Query("to")
 	amount := c.Query("amount")
 	min_amount := c.Query("min_amount")
+	_, b1 := new(big.Int).SetString(amount, 10)
+	_, b2 := new(big.Int).SetString(min_amount, 10)
 
 	coin1 := strings.ToUpper(source)
 	coin2 := strings.ToUpper(target)
@@ -24,24 +27,13 @@ func SwapOrder(c *gin.Context) {
 		coin1, coin2 = coin2, coin1
 	}
 	_, _, _, err := model.GetPrice(coin1, coin2)
-	if err != nil {
+	if err != nil || !b1 || !b2 || len(to) == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "params error",
 		})
-		gl.OutLogger.Error("Get price(%s:%s) error when swap_order. %v", coin1, coin2, err)
-		return
-	}
-	_, err1 := (big.NewInt(0)).SetString(amount, 10)
-	_, err2 := (big.NewInt(0)).SetString(min_amount, 10)
-	if !err1 || !err2 || len(to) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"result":   false,
-			"err_code": gl.PARAMS_ERROR,
-			"err_msg":  "amount or min_amount params error",
-		})
-		gl.OutLogger.Error("amount or min_amount params error. %s, %s, %s", amount, min_amount, to)
+		gl.OutLogger.Error("Get price(%s:%s) error when swap_order, or params error(%s,%s,%s). %v", coin1, coin2, amount, min_amount, to, err)
 		return
 	}
 
@@ -54,6 +46,7 @@ func SwapOrder(c *gin.Context) {
 		gl.OutLogger.Error("Insert into db error(swap_order_pending). %s, %v", c.GetString("account"), err)
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"result": true,
 	})
@@ -98,10 +91,20 @@ func CancelPendingSwapOrder(c *gin.Context) {
 
 func GetSwapOrders(c *gin.Context) {
 	account := c.GetString("account")
-	count, _ := strconv.Atoi(c.DefaultQuery("count", "5"))
-	if count == 0 {
-		count = 5
+	count, err := strconv.Atoi(c.DefaultQuery("count", "5"))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"result":   false,
+			"err_code": gl.PARAMS_ERROR,
+			"err_msg":  "params error",
+		})
+		gl.OutLogger.Error("param error when get swap orders. %s : %v", c.Query("count"), err)
+		return
 	}
+	if count > config.MaxQueryCount {
+		count = config.MaxQueryCount
+	}
+
 	o, err := model.GetSwapOrders(account, count)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
