@@ -12,40 +12,41 @@ import (
 
 func LiquidityAddOrder(c *gin.Context) {
 	account := c.GetString("account")
-	coin := strings.ToUpper(c.Query("coin"))
-	amount := c.Query("amount")
 	coin1 := strings.ToUpper(c.Query("coin1"))
+	coin2 := strings.ToUpper(c.Query("coin2"))
+	amount1 := c.Query("amount1")
+	amount2 := c.Query("amount2")
 
-	c1, c2 := coin, coin1
-	if c1 > c2 {
-		c1, c2 = c2, c1
+	if coin1 > coin2 {
+		coin1, coin2 = coin2, coin1
+		amount1, amount2 = amount2, amount1
 	}
-	if _, _, _, err := model.GetPrice(c1, c2); err != nil {
+	if _, _, _, err := model.GetPrice(coin1, coin2); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "have no pair",
 		})
-		gl.OutLogger.Error("Add liquidity order error. %s, %s, %v", c1, c2, err)
+		gl.OutLogger.Error("Get price when add liquidity order error. %s, %s, %v", coin1, coin2, err)
 		return
 	}
-	if len(amount) == 0 || len(account) < 0 {
+	if len(amount1) == 0 || len(amount2) < 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "params error.",
 		})
-		gl.OutLogger.Error("Add liquidity order params error. %s : %s", amount, account)
+		gl.OutLogger.Error("Add liquidity order params error. %s : %s", amount1, amount2)
 		return
 	}
 
-	if err := model.InsertPendingLiquidityOrder(account, coin, coin1, amount, 1); err != nil {
+	if err := model.InsertPendingLiquidityAddOrder(account, coin1, coin2, amount1, amount2); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
-			"err_msg":  "maybe you have a liquidity order is pending.",
+			"err_msg":  "maybe you have a liquidity add order is pending.",
 		})
-		gl.OutLogger.Error("Insert into db error(pending_liquidity_order). 1, %s, %s, %s, %s, %v", account, coin, coin1, amount, err)
+		gl.OutLogger.Error("Insert into db error(pending_liquidity_add_order). 1, %s, %s, %s, %s, %s, %v", account, coin1, coin2, amount1, amount2, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -68,10 +69,10 @@ func LiquidityRemoveOrder(c *gin.Context) {
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "have no pair",
 		})
-		gl.OutLogger.Error("Remove liquidity order error. %s, %s, %v", coin1, coin2, err)
+		gl.OutLogger.Error("Get price when remove liquidity order error. %s, %s, %v", coin1, coin2, err)
 		return
 	}
-	if len(lp) == 0 || len(account) == 0 {
+	if len(lp) == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
@@ -81,13 +82,13 @@ func LiquidityRemoveOrder(c *gin.Context) {
 		return
 	}
 
-	if err := model.InsertPendingLiquidityOrder(account, coin1, coin2, lp, -1); err != nil {
+	if err := model.RemoveLiquidity(account, coin1, coin2, lp); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
-			"err_msg":  "maybe you have a liquidity order is pending.",
+			"err_msg":  "maybe balance is not enough",
 		})
-		gl.OutLogger.Error("Insert into db error(liquidity_order_pending). -1, %s, %s, %s, %s, %v", account, coin1, coin2, lp, err)
+		gl.OutLogger.Error("Remove liquidity in db error. %s, %s, %s, %s, %v", account, coin1, coin2, lp, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -95,16 +96,16 @@ func LiquidityRemoveOrder(c *gin.Context) {
 	})
 }
 
-func CancelPendingLiquidityOrder(c *gin.Context) {
+func CancelPendingLiquidityAddOrder(c *gin.Context) {
 	account := c.GetString("account")
-	err := model.MovePendingLiquidityOrderToCancel(account)
+	err := model.MovePendingLiquidityAddOrderToCancel(account)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.SYSTEM_ERROR,
-			"err_msg":  "have no pending liquidity order",
+			"err_msg":  "have no pending liquidity add order",
 		})
-		gl.OutLogger.Error("cancel liquidity_order_pending error. %s, %v", account, err)
+		gl.OutLogger.Error("cancel liquidity_order_add_pending error. %s, %v", account, err)
 		return
 	}
 
@@ -113,16 +114,16 @@ func CancelPendingLiquidityOrder(c *gin.Context) {
 	})
 }
 
-func GetPendingLiquidityOrder(c *gin.Context) {
+func GetPendingLiquidityAddOrder(c *gin.Context) {
 	account := c.GetString("account")
-	o, err := model.GetPendingLiquidityOrder(account)
+	o, err := model.GetPendingLiquidityAddOrder(account)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.SYSTEM_ERROR,
-			"err_msg":  "have no pending liquidity order",
+			"err_msg":  "have no pending liquidity add order",
 		})
-		gl.OutLogger.Error("get liquidity_order_pending error. %s, %v", account, err)
+		gl.OutLogger.Error("get liquidity_order_add_pending error. %s, %v", account, err)
 		return
 	}
 

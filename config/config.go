@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strings"
 )
 
 type db struct {
@@ -19,6 +20,7 @@ var (
 	Db        db
 	HttpPort  int
 	TokenTime int64 //seconds
+	SendCoins map[string]struct{}
 )
 
 //Load load config file
@@ -29,10 +31,11 @@ func init() {
 	}
 	defer file.Close()
 	type Config struct {
-		Env       string `json:"env"`
-		HttpPort  int    `json:"http_port"`
-		Db        db     `json:"db"`
-		TokenTime int64  `json:"token_time"`
+		Env       string   `json:"env"`
+		HttpPort  int      `json:"http_port"`
+		Db        db       `json:"db"`
+		TokenTime int64    `json:"token_time"`
+		SendCoins []string `json:"send_coin"`
 	}
 	all := &Config{}
 	if err = json.NewDecoder(file).Decode(all); err != nil {
@@ -42,4 +45,8 @@ func init() {
 	Db = all.Db
 	HttpPort = all.HttpPort
 	TokenTime = all.TokenTime
+	SendCoins = make(map[string]struct{})
+	for _, coin := range all.SendCoins {
+		SendCoins[strings.ToUpper(coin)] = struct{}{}
+	}
 }

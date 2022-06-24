@@ -72,6 +72,7 @@ func RetrieveCoin(account, coin, amount, to string) error {
 	}
 
 	if _, err := tx.Exec("insert into `send_coin_pending`(`link_id`,`to`,`coin`,`amount`,`type`) VALUES(?,?,?,?,2)", id, to, coin, amount); err != nil {
+		tx.Rollback()
 		return err
 	}
 
