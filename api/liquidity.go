@@ -15,8 +15,8 @@ import (
 func LiquidityAddOrder(c *gin.Context) {
 	account := c.GetString("account")
 	coin1 := strings.ToUpper(c.Query("coin1"))
-	coin2 := strings.ToUpper(c.Query("coin1"))
-	amount := c.Query("amount")
+	coin2 := strings.ToUpper(c.Query("coin2"))
+	amount1 := c.Query("amount1")
 
 	_, _, _, err := model.GetPrice(coin1, coin2)
 	if err != nil {
@@ -29,19 +29,19 @@ func LiquidityAddOrder(c *gin.Context) {
 		return
 	}
 
-	a, b1 := new(big.Int).SetString(amount, 10)
+	a, b1 := new(big.Int).SetString(amount1, 10)
 	if !b1 {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "params error.",
 		})
-		gl.OutLogger.Error("Add liquidity order params error. %s", amount)
+		gl.OutLogger.Error("Add liquidity order params error. %s", amount1)
 		return
 	}
 
 	if _, exist := config.SendCoins[coin1]; exist {
-		err = model.InsertPendingLiquidityAddOrder(account, coin1, coin2, amount)
+		err = model.InsertPendingLiquidityAddOrder(account, coin1, coin2, amount1)
 	} else {
 		err = model.AddLiquidity(account, coin1, coin2, a)
 	}
@@ -51,7 +51,7 @@ func LiquidityAddOrder(c *gin.Context) {
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "maybe you have a liquidity add order is pending.",
 		})
-		gl.OutLogger.Error("add liquidity error. %s, %s, %s, %s, %s, %v", account, coin1, coin2, amount, err)
+		gl.OutLogger.Error("add liquidity error. %s, %s, %s, %s, %s, %v", account, coin1, coin2, amount1, err)
 		return
 	}
 
@@ -64,27 +64,18 @@ func LiquidityRemoveOrder(c *gin.Context) {
 	account := c.GetString("account")
 	coin1 := strings.ToUpper(c.Query("coin1"))
 	coin2 := strings.ToUpper(c.Query("coin2"))
-	lp := c.Query("lp")
+	lp, b := new(big.Int).SetString(c.Query("lp"), 10)
 
 	if coin1 > coin2 {
 		coin1, coin2 = coin2, coin1
 	}
-	if _, _, _, err := model.GetPrice(coin1, coin2); err != nil {
+	if _, _, _, err := model.GetPrice(coin1, coin2); err != nil || b {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "have no pair",
 		})
-		gl.OutLogger.Error("Get price when remove liquidity order error. %s, %s, %v", coin1, coin2, err)
-		return
-	}
-	if len(lp) == 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"result":   false,
-			"err_code": gl.PARAMS_ERROR,
-			"err_msg":  "params error.",
-		})
-		gl.OutLogger.Error("Remove liquidity order params error. %s : %s", lp, account)
+		gl.OutLogger.Error("params error. %s, %s, %v, %v", coin1, coin2, err, lp)
 		return
 	}
 
