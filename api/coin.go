@@ -62,7 +62,7 @@ func CoinRetrieveOrder(c *gin.Context) {
 		return
 	}
 
-	if err := model.RetrieveCoin(account, to, coin, amount); err != nil {
+	if err := model.RetrieveCoin(account, coin, amount, to); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,

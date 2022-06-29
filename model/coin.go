@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"math/big"
+	"time"
 )
 
 //PendingCollectOrder, collect coin order which is pending
@@ -77,7 +78,7 @@ func RetrieveCoin(account, coin, amount, to string) error {
 
 	//insert a record to coin_order of db and get the id
 	var id int64
-	if res, err := db.Exec("insert into `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`) VALUES(?,?,?,?,-1,2)", account, to, coin, amount); err != nil {
+	if res, err := db.Exec("insert into `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,-1,2,?)", account, to, coin, amount, time.Now().Unix()); err != nil {
 		tx.Rollback()
 		return err
 	} else {
@@ -127,13 +128,13 @@ func MovePendingCollectOrderToCancel(address string) error {
 	}
 
 	//delete the record of collect_order_pending.
-	if _, err := tx.Exec("delete from collect_order_pending where account=? or from", address, address); err != nil {
+	if _, err := tx.Exec("delete from collect_order_pending where `account`=? or `from`=?", address, address); err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	//add a record of coin_order
-	if _, err := tx.Exec("insert into `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,1,4,?)", o.Account, o.From, o.Coin, o.Amount, 1, 4, o.OrderTime); err != nil {
+	if _, err := tx.Exec("insert into `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,1,4,?)", o.Account, o.From, o.Coin, o.Amount, o.OrderTime); err != nil {
 		tx.Rollback()
 		return err
 	}

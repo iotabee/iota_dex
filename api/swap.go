@@ -80,7 +80,7 @@ func CancelPendingSwapOrder(c *gin.Context) {
 			"err_code": gl.SYSTEM_ERROR,
 			"err_msg":  "have no pending swap order",
 		})
-		gl.OutLogger.Error("cancel pending_swap_order error. %s, %v", account, err)
+		gl.OutLogger.Error("cancel swap_order_pending error. %s, %v", account, err)
 		return
 	}
 

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"iota_dex/config"
 	"iota_dex/gl"
 	"iota_dex/model"
 	"math/big"
@@ -14,15 +15,11 @@ import (
 func LiquidityAddOrder(c *gin.Context) {
 	account := c.GetString("account")
 	coin1 := strings.ToUpper(c.Query("coin1"))
-	coin2 := strings.ToUpper(c.Query("coin2"))
-	amount1 := c.Query("amount1")
-	amount2 := c.Query("amount2")
-	if coin1 > coin2 {
-		coin1, coin2 = coin2, coin1
-		amount1, amount2 = amount2, amount1
-	}
+	coin2 := strings.ToUpper(c.Query("coin1"))
+	amount := c.Query("amount")
 
-	if _, _, _, err := model.GetPrice(coin1, coin2); err != nil {
+	_, _, _, err := model.GetPrice(coin1, coin2)
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
@@ -32,25 +29,29 @@ func LiquidityAddOrder(c *gin.Context) {
 		return
 	}
 
-	_, b1 := new(big.Int).SetString(amount1, 10)
-	_, b2 := new(big.Int).SetString(amount2, 10)
-	if !b1 || !b2 {
+	a, b1 := new(big.Int).SetString(amount, 10)
+	if !b1 {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "params error.",
 		})
-		gl.OutLogger.Error("Add liquidity order params error. %s : %s", amount1, amount2)
+		gl.OutLogger.Error("Add liquidity order params error. %s", amount)
 		return
 	}
 
-	if err := model.InsertPendingLiquidityAddOrder(account, coin1, coin2, amount1, amount2); err != nil {
+	if _, exist := config.SendCoins[coin1]; exist {
+		err = model.InsertPendingLiquidityAddOrder(account, coin1, coin2, amount)
+	} else {
+		err = model.AddLiquidity(account, coin1, coin2, a)
+	}
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "maybe you have a liquidity add order is pending.",
 		})
-		gl.OutLogger.Error("Insert into db error(liquidity_add_order_pending). %s, %s, %s, %s, %s, %v", account, coin1, coin2, amount1, amount2, err)
+		gl.OutLogger.Error("add liquidity error. %s, %s, %s, %s, %s, %v", account, coin1, coin2, amount, err)
 		return
 	}
 

@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-var baseUrl = "http://localhost:" + strconv.Itoa(config.HttpPort) + "/api"
+var baseUrl = "http://localhost:" + strconv.Itoa(config.HttpPort)
 
 func RunTest() {
 	privateKey, err := crypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
@@ -42,8 +42,6 @@ func RunTest() {
 	testGetPendingCoinOrder(params)
 	testCancelCoinOrder(params)
 	testOrderRetrieveCoin(params)
-	testGetPendingCoinOrder(params)
-	testCancelCoinOrder(params)
 	testGetCoinOrderList(params)
 	testOrderAddLiquidity(params)
 	testGetPendingLiquidityOrder(params)
@@ -55,17 +53,17 @@ func RunTest() {
 }
 
 func testPairs() {
-	url := baseUrl + "/pairs"
+	url := baseUrl + "/public/pairs"
 	fmt.Println(HttpRequest(url, "GET", "", nil))
 }
 
 func testPrice() {
-	url := baseUrl + "/price?coin1=smr&coin2=iota"
+	url := baseUrl + "/public/price?coin1=smr&coin2=iota"
 	fmt.Println(HttpRequest(url, "GET", "", nil))
 }
 
 func testBalance() {
-	url := baseUrl + "/balance?account=0x96216849c49358B10257cb55b28eA603c874b05E"
+	url := baseUrl + "/public/balance?account=0x96216849c49358B10257cb55b28eA603c874b05E"
 	fmt.Println(HttpRequest(url, "GET", "", nil))
 }
 

@@ -54,7 +54,7 @@ func GetPairs() ([]SwapPair, error) {
 }
 
 func GetPrice(coin1, coin2 string) (string, string, float32, error) {
-	row := db.QueryRow("select amount1,amount2,fee_rate from swap_pair where coin1=? and coin2=?", coin1, coin2)
+	row := db.QueryRow("select reserve1,reserve2,fee_rate from swap_pair where coin1=? and coin2=?", coin1, coin2)
 	var a1, a2 string
 	var fr float32
 	if err := row.Scan(&a1, &a2, &fr); err != nil {

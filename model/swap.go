@@ -59,7 +59,7 @@ func MovePendingSwapOrderToCancel(account string) error {
 		return err
 	}
 
-	if _, err := tx.Exec("insert into `swap_order`(`from_address`,`from_coin`,`from_amount`,`to_address`,`to_coin`,`to_amount`,`state`,`o_time`) VALUES(?,?,?,?,?,?,4,?)", o.FromAddr, o.FromCoin, o.FromAmount, o.ToAddr, o.ToCoin, o.MinAmount, 4, o.OrderTime); err != nil {
+	if _, err := tx.Exec("insert into `swap_order`(`from_address`,`from_coin`,`from_amount`,`to_address`,`to_coin`,`to_amount`,`state`,`o_time`) VALUES(?,?,?,?,?,?,4,?)", o.FromAddr, o.FromCoin, o.FromAmount, o.ToAddr, o.ToCoin, o.MinAmount, o.OrderTime); err != nil {
 		tx.Rollback()
 		return err
 	}
