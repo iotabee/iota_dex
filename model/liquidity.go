@@ -133,7 +133,7 @@ func AddLiquidity(account, coin1, coin2 string, amount1 *big.Int) error {
 		return err
 	}
 
-	if _, err := tx.Exec("insert into `liquidity_order`(`account`,`coin1`,`coin2`,`amount1`,`amount2`,`lp`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,'0',?,-1,1,?)", account, coin1, coin2, amount1.String(), addLiquidity.String(), time.Now().Unix()); err != nil {
+	if _, err := tx.Exec("insert into `liquidity_order`(`account`,`coin1`,`coin2`,`amount1`,`amount2`,`lp`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,?,?,-1,1,?)", account, coin1, coin2, amount1.String(), a2.String(), addLiquidity.String(), time.Now().Unix()); err != nil {
 		tx.Rollback()
 		return err
 	}
