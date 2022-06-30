@@ -47,10 +47,9 @@ func CoinCollectOrder(c *gin.Context) {
 func CoinRetrieveOrder(c *gin.Context) {
 	to := c.Query("to")
 	coin := c.Query("coin")
-	amount := c.Query("amount")
 	account := c.GetString("account")
+	amount, b := new(big.Int).SetString(c.Query("amount"), 10)
 
-	_, b := new(big.Int).SetString(amount, 10)
 	coin = strings.ToUpper(coin)
 	if len(coin) == 0 || len(to) == 0 || !b {
 		c.JSON(http.StatusOK, gin.H{
@@ -58,17 +57,17 @@ func CoinRetrieveOrder(c *gin.Context) {
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "params error",
 		})
-		gl.OutLogger.Error("param error when retrieve coin. %s, %s, %s", to, coin, amount)
+		gl.OutLogger.Error("param error when retrieve coin. %s, %s, %s", to, coin, amount.String())
 		return
 	}
 
-	if err := model.RetrieveCoin(account, coin, amount, to); err != nil {
+	if err := model.RetrieveCoin(account, coin, to, amount); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "maybe balance is not enough",
 		})
-		gl.OutLogger.Error("retriveve coin in db error. %s, %s, %s, %s, %v", account, to, coin, amount, err)
+		gl.OutLogger.Error("retrieve coin in db error. %s, %s, %s, %s, %v", account, to, coin, amount.String(), err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{

@@ -51,7 +51,7 @@ func LiquidityAddOrder(c *gin.Context) {
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "maybe you have a liquidity add order is pending.",
 		})
-		gl.OutLogger.Error("add liquidity error. %s, %s, %s, %s, %s, %v", account, coin1, coin2, amount1, err)
+		gl.OutLogger.Error("add liquidity error. %s, %s, %s, %s, %v", account, coin1, coin2, amount1, err)
 		return
 	}
 
@@ -69,13 +69,13 @@ func LiquidityRemoveOrder(c *gin.Context) {
 	if coin1 > coin2 {
 		coin1, coin2 = coin2, coin1
 	}
-	if _, _, _, err := model.GetPrice(coin1, coin2); err != nil || b {
+	if _, _, _, err := model.GetPrice(coin1, coin2); err != nil || !b {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
 			"err_msg":  "have no pair",
 		})
-		gl.OutLogger.Error("params error. %s, %s, %v, %v", coin1, coin2, err, lp)
+		gl.OutLogger.Error("remove liquidity request params error. %s, %s, %v, %v", coin1, coin2, c.Query("lp"), err)
 		return
 	}
 

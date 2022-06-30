@@ -16,7 +16,7 @@ type PendingLiquidityAddOrder struct {
 	OrderTime int    `json:"o_time"`
 }
 
-type LiquidityAddOrder struct {
+type LiquidityOrder struct {
 	Id        int64  `json:"id"`
 	Account   string `json:"account"`
 	Coin1     string `json:"coin1"`
@@ -279,7 +279,7 @@ func RemoveLiquidity(account, coin1, coin2 string, amount *big.Int) error {
 
 //GetPendingLiquidityAddOrder
 func GetPendingLiquidityAddOrder(account string) (PendingLiquidityAddOrder, error) {
-	row := db.QueryRow("select `account`,`coin1`,`coin2`,`amount`,`o_time` from liquidity_order_add_pending where `account`=?", account)
+	row := db.QueryRow("select `account`,`coin1`,`coin2`,`amount`,`o_time` from liquidity_add_order_pending where `account`=?", account)
 
 	o := PendingLiquidityAddOrder{}
 	if err := row.Scan(&o.Account, &o.Coin1, &o.Coin2, &o.Amount, &o.OrderTime); err != nil {
@@ -298,43 +298,54 @@ func MovePendingLiquidityAddOrderToCancel(account string) error {
 		return err
 	}
 
-	row := tx.QueryRow("select `account`,`coin1`,`coin2`,`amount`,`o_time` from liquidity_order_pending where `account`=? for update", account)
+	//lock row of table, query the pending liquidity add order
+	row := tx.QueryRow("select `account`,`coin1`,`coin2`,`amount`,`o_time` from liquidity_add_order_pending where `account`=? for update", account)
 	o := PendingLiquidityAddOrder{}
 	if err := row.Scan(&o.Account, &o.Coin1, &o.Coin2, &o.Amount, &o.OrderTime); err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	if _, err := tx.Exec("delete from liquidity_order_pending where account=?", account); err != nil {
+	//delete the record
+	if _, err := tx.Exec("delete from liquidity_add_order_pending where account=?", account); err != nil {
 		tx.Rollback()
 		return err
 	}
-	if _, err := tx.Exec("insert into `liquidity_order`(`account`,`coin1`,`coin2`,`amount1`,`amount2`,`lp`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,'0',1,4,?)", o.Account, o.Coin1, o.Coin2, o.Amount, o.OrderTime); err != nil {
+
+	//insert a record to liquidity_order
+	a1, a2 := o.Amount, "0"
+	if o.Coin1 > o.Coin2 {
+		o.Coin1, o.Coin2 = o.Coin2, o.Coin1
+		a1, a2 = a2, a1
+	}
+	if _, err := tx.Exec("insert into `liquidity_order`(`account`,`coin1`,`coin2`,`amount1`,`amount2`,`lp`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,?,'0',1,4,?)", o.Account, o.Coin1, o.Coin2, a1, a2, o.OrderTime); err != nil {
 		tx.Rollback()
 		return err
 	}
 	return tx.Commit()
 }
 
-func GetLiquidityOrder(id int64) (LiquidityAddOrder, error) {
+//GetLiquidityOrder get liquidity order with id
+func GetLiquidityOrder(id int64) (LiquidityOrder, error) {
 	row := db.QueryRow("select `account`,`coin1`,`coin2`,`amount1`,`amount2`,`lp`,`direction`,`state`,`o_time`,`e_time` from liquidity_order where id=?", id)
 
-	o := LiquidityAddOrder{Id: id}
+	o := LiquidityOrder{Id: id}
 	if err := row.Scan(&o.Account, &o.Coin1, &o.Coin2, &o.Amount1, &o.Amount2, &o.Lp, &o.Direction, &o.State, &o.OrderTime, &o.EndTime); err != nil {
 		return o, err
 	}
 	return o, nil
 }
 
-func GetLiquidityOrders(account string, count int) ([]LiquidityAddOrder, error) {
+//GetLiquidityOrders get liquidity orders by account
+func GetLiquidityOrders(account string, count int) ([]LiquidityOrder, error) {
 	rows, err := db.Query("select `id`,`account`,`coin1`,`coin2`,`amount1`,`amount2`,`lp`,`direction`,`state`,`o_time`,`e_time` from liquidity_order where `account`=? order by id desc limit ?", account, count)
 	if err != nil {
 		return nil, err
 	}
 
-	os := make([]LiquidityAddOrder, 0)
+	os := make([]LiquidityOrder, 0)
 	for rows.Next() {
-		o := LiquidityAddOrder{}
+		o := LiquidityOrder{}
 		if err = rows.Scan(&o.Id, &o.Account, &o.Coin1, &o.Coin2, &o.Amount1, &o.Amount2, &o.Lp, &o.Direction, &o.State, &o.OrderTime, &o.EndTime); err != nil {
 			break
 		}

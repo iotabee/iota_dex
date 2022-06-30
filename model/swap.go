@@ -23,6 +23,7 @@ type SwapOrder struct {
 	EndTime    int    `json:"e_time"`
 }
 
+//InsertPendingSwapOrder
 func InsertPendingSwapOrder(fromAddr, fromCoin, fromAmount, toAddr, toCoin, minAmount string) error {
 	if _, err := db.Exec("insert into `swap_order_pending`(`from_address`,`from_coin`,`from_amount`,`to_address`,`to_coin`,`min_amount`) VALUES(?,?,?,?,?,?)", fromAddr, fromCoin, fromAmount, toAddr, toCoin, minAmount); err != nil {
 		return err
@@ -30,6 +31,7 @@ func InsertPendingSwapOrder(fromAddr, fromCoin, fromAmount, toAddr, toCoin, minA
 	return nil
 }
 
+//GetPendingSwapOrder
 func GetPendingSwapOrder(account string) (PendingSwapOrder, error) {
 	row := db.QueryRow("select `from_address`,`from_coin`,`from_amount`,`to_address`,`to_coin`,`min_amount`,`o_time` from swap_order_pending where `from_address`=?", account)
 	o := PendingSwapOrder{}
@@ -39,6 +41,7 @@ func GetPendingSwapOrder(account string) (PendingSwapOrder, error) {
 	return o, nil
 }
 
+//MovePendingSwapOrderToCancel cancelthe penging swap order
 func MovePendingSwapOrderToCancel(account string) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -67,6 +70,7 @@ func MovePendingSwapOrderToCancel(account string) error {
 	return tx.Commit()
 }
 
+//GetSwapOrder by id
 func GetSwapOrder(id int64) (SwapOrder, error) {
 	row := db.QueryRow("select `id`,`from_address`,`from_coin`,`from_amount`,`to_address`,`to_coin`,`to_amount`,`state`,`o_time`,`e_time` from swap_order where id=?", id)
 	o := SwapOrder{}
@@ -76,6 +80,7 @@ func GetSwapOrder(id int64) (SwapOrder, error) {
 	return o, nil
 }
 
+//GetSwapOrders by account
 func GetSwapOrders(account string, count int) ([]SwapOrder, error) {
 	rows, err := db.Query("select `id`,`from_address`,`from_coin`,`from_amount`,`to_address`,`to_coin`,`to_amount`,`state`,`o_time`,`e_time` from swap_order where `from_address`=? order by id desc limit ?", account, count)
 	if err != nil {

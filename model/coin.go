@@ -29,10 +29,10 @@ type CoinOrder struct {
 }
 
 //InsertPendingCollectOrder, insert a collect_order_pending record to db.
-// @account : address that the coin to collect
-// @from 	: address which the coin from
-// @coin	: the coin type as string of upper
-// @amount	: amount that the coin to collect
+//@account 	: address that the coin to collect
+//@from 	: address which the coin from
+//@coin		: the coin type as string of upper
+//@amount	: amount that the coin to collect
 //@return	: nil if successful, or error if failed
 func InsertPendingCollectOrder(account, from, coin, amount string) error {
 	if _, err := db.Exec("insert into `collect_order_pending`(`account`,`from`,`coin`,`amount`) VALUES(?,?,?,?)", account, from, coin, amount); err != nil {
@@ -42,12 +42,12 @@ func InsertPendingCollectOrder(account, from, coin, amount string) error {
 }
 
 //RetrieveCoin, retrieve coin from the account. Use transaction of db to deal the balance of account.
-// @account	: address that the coin to retrieve
-// @coin	: the coin type as string of upper
-// @amount	: amount that the coin to retrieve
-// @to		: address which the coin to send
+//@account	: address that the coin to retrieve
+//@coin		: the coin type as string of upper
+//@amount	: amount that the coin to retrieve
+//@to		: address which the coin to send
 //@return	: nil if successful, or error if failed
-func RetrieveCoin(account, coin, amount, to string) error {
+func RetrieveCoin(account, coin, to string, amount *big.Int) error {
 	tx, err := db.Begin()
 	if err != nil {
 		if tx != nil {
@@ -64,21 +64,20 @@ func RetrieveCoin(account, coin, amount, to string) error {
 		return err
 	}
 	balance, _ := new(big.Int).SetString(str, 10)
-	balanceRetrieve, _ := new(big.Int).SetString(amount, 10)
-	if balance.Cmp(balanceRetrieve) < 0 {
+	if balance.Cmp(amount) < 0 {
 		tx.Rollback()
-		return errors.New("balance is not enough. " + str + " : " + amount)
+		return errors.New("balance is not enough. " + str + " : " + amount.String())
 	}
 
 	//update the balance
-	if _, err := tx.Exec("update balance set amount=? where account=? and coin=?", balance.Sub(balance, balanceRetrieve).String(), account, coin); err != nil {
+	if _, err := tx.Exec("update balance set amount=? where account=? and coin=?", balance.Sub(balance, amount).String(), account, coin); err != nil {
 		tx.Rollback()
 		return err
 	}
 
 	//insert a record to coin_order of db and get the id
 	var id int64
-	if res, err := db.Exec("insert into `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,-1,2,?)", account, to, coin, amount, time.Now().Unix()); err != nil {
+	if res, err := db.Exec("insert into `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,-1,2,?)", account, to, coin, amount.String(), time.Now().Unix()); err != nil {
 		tx.Rollback()
 		return err
 	} else {
@@ -89,7 +88,7 @@ func RetrieveCoin(account, coin, amount, to string) error {
 	}
 
 	//insert a record to send_coin_pending of db, set link_id=id
-	if _, err := tx.Exec("insert into `send_coin_pending`(`link_id`,`to`,`coin`,`amount`,`type`) VALUES(?,?,?,?,2)", id, to, coin, amount); err != nil {
+	if _, err := tx.Exec("insert into `send_coin_pending`(`link_id`,`to`,`coin`,`amount`,`type`) VALUES(?,?,?,?,2)", id, to, coin, amount.String()); err != nil {
 		tx.Rollback()
 		return err
 	}

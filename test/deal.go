@@ -47,8 +47,6 @@ func RunTest() {
 	testGetPendingLiquidityOrder(params)
 	testCancelLiquidityOrder(params)
 	testOrderRemoveLiquidity(params)
-	testGetPendingLiquidityOrder(params)
-	testCancelLiquidityOrder(params)
 	testGetLiquidityOrderList(params)
 }
 
@@ -116,7 +114,7 @@ func testGetCoinOrderList(sign string) {
 }
 
 func testOrderAddLiquidity(sign string) {
-	params := fmt.Sprintf("coin=%s&amount=%s&coin1=%s", "IOTA", "1000000000000000000", "SMR")
+	params := fmt.Sprintf("coin1=%s&amount1=%s&coin2=%s", "IOTA", "1000000000000000000", "SMR")
 	url := baseUrl + "/order/liquidity/add?" + params + "&" + sign
 	fmt.Println(HttpRequest(url, "GET", "", nil))
 }
