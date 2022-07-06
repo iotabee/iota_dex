@@ -12,7 +12,7 @@ type PendingLiquidityAddOrder struct {
 	Account   string `json:"account"`
 	Coin1     string `json:"coin1"`
 	Coin2     string `json:"coin2"`
-	Amount    string `json:"amount"`
+	Amount1   string `json:"amount1"`
 	OrderTime int    `json:"o_time"`
 }
 
@@ -143,7 +143,7 @@ func AddLiquidity(account, coin1, coin2 string, amount1 *big.Int) error {
 
 //InsertPendingLiquidityAddOrder add a record to liquidity_add_order_pending, waiting for deal
 func InsertPendingLiquidityAddOrder(account, coin1, coin2, amount string) error {
-	if _, err := db.Exec("insert into `liquidity_add_order_pending`(`account`,`coin1`,`coin2`,`amount`) VALUES(?,?,?,?)", account, coin1, coin2, amount); err != nil {
+	if _, err := db.Exec("insert into `liquidity_add_order_pending`(`account`,`coin1`,`coin2`,`amount1`) VALUES(?,?,?,?)", account, coin1, coin2, amount); err != nil {
 		return err
 	}
 	return nil
@@ -152,13 +152,13 @@ func InsertPendingLiquidityAddOrder(account, coin1, coin2, amount string) error 
 //RemoveLiquidity remove liquidity from pool
 //@amount	: amount of lp token to remove
 //@coin1	: require coin1 < coin2
-func RemoveLiquidity(account, coin1, coin2 string, amount *big.Int) error {
+func RemoveLiquidity(account, coin1, coin2 string, amount *big.Int) (int64, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		if tx != nil {
 			tx.Rollback()
 		}
-		return err
+		return 0, err
 	}
 
 	//lock table balance to get the amount of lp token
@@ -166,25 +166,25 @@ func RemoveLiquidity(account, coin1, coin2 string, amount *big.Int) error {
 	rows, err := tx.Query("select coin,amount from balance where account=? and (coin=? or coin=? or coin=?)for update", account, coin1, coin2, lpCoin)
 	if err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	}
 	balances := make(map[string]*big.Int)
 	for rows.Next() {
 		var str1, str2 string
 		if err = rows.Scan(&str1, &str2); err != nil {
 			tx.Rollback()
-			return err
+			return 0, err
 		}
 		a, b := new(big.Int).SetString(str2, 10)
 		if !b {
 			tx.Rollback()
-			return fmt.Errorf("the balance amount(%s : %s) convert To big.Int error", str1, str2)
+			return 0, fmt.Errorf("the balance amount(%s : %s) convert To big.Int error", str1, str2)
 		}
 		balances[str1] = a
 	}
 	if b, exist := balances[lpCoin]; !exist || b.Cmp(amount) < 0 {
 		tx.Rollback()
-		return errors.New("amount of lp token is not enough")
+		return 0, errors.New("amount of lp token is not enough")
 	}
 
 	//lock table swap_pair to get the amount of reserve and lp token
@@ -192,14 +192,14 @@ func RemoveLiquidity(account, coin1, coin2 string, amount *big.Int) error {
 	var str1, str2, str3 string
 	if err = row.Scan(&str1, &str2, &str3); err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	}
 	reserve1, b1 := new(big.Int).SetString(str1, 10)
 	reserve2, b2 := new(big.Int).SetString(str2, 10)
 	totalSupply, b3 := new(big.Int).SetString(str3, 10)
 	if !b1 || !b2 || !b3 || totalSupply.Cmp(amount) <= 0 {
 		tx.Rollback()
-		return fmt.Errorf("reserve1,reserve2,totalSupply convert to big.Int error. %s:%s:%s", str1, str2, str3)
+		return 0, fmt.Errorf("reserve1,reserve2,totalSupply convert to big.Int error. %s:%s:%s", str1, str2, str3)
 	}
 
 	//caculate the out amounts for coin1 and coin2
@@ -207,20 +207,20 @@ func RemoveLiquidity(account, coin1, coin2 string, amount *big.Int) error {
 	amountOut2 := new(big.Int).Div(new(big.Int).Mul(amount, reserve2), totalSupply)
 	if amountOut1.Cmp(big.NewInt(0)) <= 0 || amountOut2.Cmp(big.NewInt(0)) <= 0 {
 		tx.Rollback()
-		return fmt.Errorf("insufficient liquidity burned")
+		return 0, fmt.Errorf("insufficient liquidity burned")
 	}
 
 	//update the swap_pair's reserve and burn lp token
 	if _, err := tx.Exec("update swap_pair set reserve1=?,reserve2=?,total_supply=? where coin1=? and coin2=?", reserve1.Sub(reserve1, amountOut1).String(), reserve2.Sub(reserve2, amountOut2).String(), totalSupply.Sub(totalSupply, amount).String(), coin1, coin2); err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	}
 
 	//update the amount of lp token
 	lp := new(big.Int).Sub(balances[lpCoin], amount)
 	if _, err := tx.Exec("update balance set amount=? where account=? and coin=?", lp.String(), account, lpCoin); err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	}
 
 	//insert a record to liquidity_order and get the id
@@ -234,11 +234,11 @@ func RemoveLiquidity(account, coin1, coin2 string, amount *big.Int) error {
 	var id int64
 	if res, err := tx.Exec("insert into `liquidity_order`(`account`,`coin1`,`coin2`,`amount1`,`amount2`,`lp`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,?,?,-1,?,?)", account, coin1, coin2, amountOut1.String(), amountOut2.String(), amount.String(), state, time.Now().Unix()); err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	} else {
 		if id, err = res.LastInsertId(); err != nil {
 			tx.Rollback()
-			return err
+			return 0, err
 		}
 	}
 
@@ -246,7 +246,7 @@ func RemoveLiquidity(account, coin1, coin2 string, amount *big.Int) error {
 	if _, exist := config.SendCoins[coin1]; exist {
 		if _, err := tx.Exec("insert into `send_coin_pending`(`link_id`,`to`,`coin`,`amount`,`type`) VALUES(?,?,?,?,3)", id, account, coin1, amountOut1.String()); err != nil {
 			tx.Rollback()
-			return err
+			return 0, err
 		}
 	} else {
 		amount1 := big.NewInt(amountOut1.Int64())
@@ -255,13 +255,13 @@ func RemoveLiquidity(account, coin1, coin2 string, amount *big.Int) error {
 		}
 		if _, err := tx.Exec("replace inito balance(account,coin,amount) values(?,?,?)", account, coin1, amount1.String()); err != nil {
 			tx.Rollback()
-			return err
+			return 0, err
 		}
 	}
 	if _, exist := config.SendCoins[coin2]; exist {
 		if _, err := tx.Exec("insert into `send_coin_pending`(`link_id`,`to`,`coin`,`amount`,`type`) VALUES(?,?,?,?,3)", id, account, coin2, amountOut2.String()); err != nil {
 			tx.Rollback()
-			return err
+			return 0, err
 		}
 	} else {
 		amount2 := big.NewInt(amountOut2.Int64())
@@ -270,19 +270,23 @@ func RemoveLiquidity(account, coin1, coin2 string, amount *big.Int) error {
 		}
 		if _, err := tx.Exec("update balance set amount=? where account=? and coin=?", account, coin1, amount2.String()); err != nil {
 			tx.Rollback()
-			return err
+			return 0, err
 		}
 	}
 
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return 0, err
+	}
+
+	return id, err
 }
 
 //GetPendingLiquidityAddOrder
 func GetPendingLiquidityAddOrder(account string) (PendingLiquidityAddOrder, error) {
-	row := db.QueryRow("select `account`,`coin1`,`coin2`,`amount`,`o_time` from liquidity_add_order_pending where `account`=?", account)
+	row := db.QueryRow("select `account`,`coin1`,`coin2`,`amount1`,`o_time` from liquidity_add_order_pending where `account`=?", account)
 
 	o := PendingLiquidityAddOrder{}
-	if err := row.Scan(&o.Account, &o.Coin1, &o.Coin2, &o.Amount, &o.OrderTime); err != nil {
+	if err := row.Scan(&o.Account, &o.Coin1, &o.Coin2, &o.Amount1, &o.OrderTime); err != nil {
 		return o, err
 	}
 	return o, nil
@@ -299,9 +303,9 @@ func MovePendingLiquidityAddOrderToCancel(account string) error {
 	}
 
 	//lock row of table, query the pending liquidity add order
-	row := tx.QueryRow("select `account`,`coin1`,`coin2`,`amount`,`o_time` from liquidity_add_order_pending where `account`=? for update", account)
+	row := tx.QueryRow("select `account`,`coin1`,`coin2`,`amount1`,`o_time` from liquidity_add_order_pending where `account`=? for update", account)
 	o := PendingLiquidityAddOrder{}
-	if err := row.Scan(&o.Account, &o.Coin1, &o.Coin2, &o.Amount, &o.OrderTime); err != nil {
+	if err := row.Scan(&o.Account, &o.Coin1, &o.Coin2, &o.Amount1, &o.OrderTime); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -313,7 +317,7 @@ func MovePendingLiquidityAddOrderToCancel(account string) error {
 	}
 
 	//insert a record to liquidity_order
-	a1, a2 := o.Amount, "0"
+	a1, a2 := o.Amount1, "0"
 	if o.Coin1 > o.Coin2 {
 		o.Coin1, o.Coin2 = o.Coin2, o.Coin1
 		a1, a2 = a2, a1

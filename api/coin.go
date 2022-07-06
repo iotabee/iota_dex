@@ -12,6 +12,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func GetBalance(c *gin.Context) {
+	account := c.GetString("account")
+	b, err := model.GetBalance(account)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"result":   false,
+			"err_code": gl.SYSTEM_ERROR,
+			"err_msg":  "param error",
+		})
+		gl.OutLogger.Error("Get balance error. %s : %v", account, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"result": true,
+		"data":   b,
+	})
+}
+
 func CoinCollectOrder(c *gin.Context) {
 	coin := c.Query("coin")
 	amount := c.Query("amount")
@@ -61,7 +79,8 @@ func CoinRetrieveOrder(c *gin.Context) {
 		return
 	}
 
-	if err := model.RetrieveCoin(account, coin, to, amount); err != nil {
+	id, err := model.RetrieveCoin(account, coin, to, amount)
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
@@ -72,6 +91,7 @@ func CoinRetrieveOrder(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"result": true,
+		"data":   id,
 	})
 }
 

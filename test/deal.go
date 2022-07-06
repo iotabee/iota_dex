@@ -48,6 +48,11 @@ func RunTest() {
 	testCancelLiquidityOrder(params)
 	testOrderRemoveLiquidity(params)
 	testGetLiquidityOrderList(params)
+
+	//
+	testOrderSwap(params)
+	testOrderCollectCoin(params)
+	testOrderAddLiquidity(params)
 }
 
 func testPairs() {

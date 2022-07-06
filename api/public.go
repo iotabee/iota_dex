@@ -26,7 +26,7 @@ func GetPairs(c *gin.Context) {
 	})
 }
 
-func GetPrice(c *gin.Context) {
+func GetPair(c *gin.Context) {
 	coin1 := c.Query("coin1")
 	coin2 := c.Query("coin2")
 	coin1 = strings.ToUpper(coin1)
@@ -35,7 +35,7 @@ func GetPrice(c *gin.Context) {
 		coin1, coin2 = coin2, coin1
 	}
 
-	a1, a2, _, err := model.GetPrice(coin1, coin2)
+	sp, err := model.GetPair(coin1, coin2)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
@@ -47,25 +47,26 @@ func GetPrice(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"result": true,
-		coin1:    a1,
-		coin2:    a2,
+		"data":   sp,
 	})
 }
 
-func GetBalance(c *gin.Context) {
-	account := c.Query("account")
-	b, err := model.GetBalance(account)
+func GetCoin(c *gin.Context) {
+	symbol := strings.ToUpper(c.Query("symbol"))
+
+	coin, err := model.GetCoin(symbol)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
-			"err_code": gl.SYSTEM_ERROR,
-			"err_msg":  "param error",
+			"err_code": gl.PARAMS_ERROR,
+			"err_msg":  "params error",
 		})
-		gl.OutLogger.Error("Get balance error. %s : %v", account, err)
+		gl.OutLogger.Error("Get coin info error. %s : %v", symbol, err)
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"result": true,
-		"data":   b,
+		"data":   coin,
 	})
 }

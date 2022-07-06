@@ -6,6 +6,24 @@ import (
 	"time"
 )
 
+//GetBalance get account's balance
+func GetBalance(account string) (map[string]string, error) {
+	rows, err := db.Query("select coin,amount from balance where account=?", account)
+	if err != nil {
+		return nil, err
+	}
+	b := make(map[string]string)
+	for rows.Next() {
+		var coin, amount string
+		err = rows.Scan(&coin, &amount)
+		if err != nil {
+			return nil, err
+		}
+		b[coin] = amount
+	}
+	return b, nil
+}
+
 //PendingCollectOrder, collect coin order which is pending
 type PendingCollectOrder struct {
 	Account   string `json:"account"`
@@ -47,13 +65,13 @@ func InsertPendingCollectOrder(account, from, coin, amount string) error {
 //@amount	: amount that the coin to retrieve
 //@to		: address which the coin to send
 //@return	: nil if successful, or error if failed
-func RetrieveCoin(account, coin, to string, amount *big.Int) error {
+func RetrieveCoin(account, coin, to string, amount *big.Int) (int64, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		if tx != nil {
 			tx.Rollback()
 		}
-		return err
+		return 0, err
 	}
 
 	//Get balance from db, and lock the 'balance' table
@@ -61,39 +79,43 @@ func RetrieveCoin(account, coin, to string, amount *big.Int) error {
 	var str string
 	if err := row.Scan(&str); err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	}
 	balance, _ := new(big.Int).SetString(str, 10)
 	if balance.Cmp(amount) < 0 {
 		tx.Rollback()
-		return errors.New("balance is not enough. " + str + " : " + amount.String())
+		return 0, errors.New("balance is not enough. " + str + " : " + amount.String())
 	}
 
 	//update the balance
 	if _, err := tx.Exec("update balance set amount=? where account=? and coin=?", balance.Sub(balance, amount).String(), account, coin); err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	}
 
 	//insert a record to coin_order of db and get the id
 	var id int64
 	if res, err := db.Exec("insert into `coin_order`(`account`,`address`,`coin`,`amount`,`direction`,`state`,`o_time`) VALUES(?,?,?,?,-1,2,?)", account, to, coin, amount.String(), time.Now().Unix()); err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	} else {
 		if id, err = res.LastInsertId(); err != nil {
 			tx.Rollback()
-			return err
+			return 0, err
 		}
 	}
 
 	//insert a record to send_coin_pending of db, set link_id=id
 	if _, err := tx.Exec("insert into `send_coin_pending`(`link_id`,`to`,`coin`,`amount`,`type`) VALUES(?,?,?,?,2)", id, to, coin, amount.String()); err != nil {
 		tx.Rollback()
-		return err
+		return 0, err
 	}
 
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }
 
 //GetPendingCollectOrder, get the pending collect order from db

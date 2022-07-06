@@ -26,7 +26,7 @@ func SwapOrder(c *gin.Context) {
 	if coin1 > coin2 {
 		coin1, coin2 = coin2, coin1
 	}
-	_, _, _, err := model.GetPrice(coin1, coin2)
+	_, err := model.GetPair(coin1, coin2)
 	if err != nil || !b1 || !b2 || len(to) == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,

@@ -18,7 +18,7 @@ func LiquidityAddOrder(c *gin.Context) {
 	coin2 := strings.ToUpper(c.Query("coin2"))
 	amount1 := c.Query("amount1")
 
-	_, _, _, err := model.GetPrice(coin1, coin2)
+	_, err := model.GetPair(coin1, coin2)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
@@ -69,7 +69,7 @@ func LiquidityRemoveOrder(c *gin.Context) {
 	if coin1 > coin2 {
 		coin1, coin2 = coin2, coin1
 	}
-	if _, _, _, err := model.GetPrice(coin1, coin2); err != nil || !b {
+	if _, err := model.GetPair(coin1, coin2); err != nil || !b {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
@@ -79,7 +79,8 @@ func LiquidityRemoveOrder(c *gin.Context) {
 		return
 	}
 
-	if err := model.RemoveLiquidity(account, coin1, coin2, lp); err != nil {
+	id, err := model.RemoveLiquidity(account, coin1, coin2, lp)
+	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"result":   false,
 			"err_code": gl.PARAMS_ERROR,
@@ -90,6 +91,7 @@ func LiquidityRemoveOrder(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"result": true,
+		"data":   id,
 	})
 }
 

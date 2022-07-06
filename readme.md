@@ -11,48 +11,47 @@
 {
     "result":true,
     "data":[{
-        "coins":{
-            "IOTA":{
-                "contract":"",
-                "wallet":"",
-                "amount":"5230498034582345",
-                "decimal":18
-            },
-            "SMR":{
-                "contract":"",
-                "wallet":"",
-                "amount":"5230498034582345",
-                "decimal":18
-            }
-        },
-        "lp":"102000",
-        "fee_rate":0.003
+        "coin1":"IOTA",
+        "coin2":"SMR",
+        "reserve1":"10000000",
+        "reserve1":"20000000",
+        "total_supply":"102000",
+        "fee_rate":0.003,
+        "fee_scale":0.15
     }]
 }
 ```
 
-## GET /public/price?coin1={1}&coin2={2}
-### respose
-```json
-{
-    "result":true,
-    "coin1":123,
-    "coin2":124,
-}
-```
-
-## GET /public/balance?account={1}
+## GET /public/pair?coin1={1}&coin2={2}
 ### respose
 ```json
 {
     "result":true,
     "data":{
-        "IOTA":100,
-        "SMR":1000
+        "coin1":"IOTA",
+        "coin2":"SMR",
+        "reserve1":"10000000",
+        "reserve1":"20000000",
+        "total_supply":"102000",
+        "fee_rate":0.003,
+        "fee_scale":0.15
     }
 }
 ```
 
+## GET /public/coin?symbol={}
+### respose
+```json
+{
+    "result":true,
+    "data":{
+        "contract":"contract address",
+        "wallet":"wallet address",
+        "decimal":18,
+        "amount":"1000"
+    }
+}
+```
 
 # sign api
 
@@ -65,20 +64,33 @@
 	sign := hexutil.Encode(signature)
 	//0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab90c50e402037b99577f3469af5e1d507b3b9a00a23b3f2ee603c826a27cd30e58e9c9a00
 ```
-Everyone private api must add the ts and sign params.
+Every private api must add the ts and sign params.
 ```
 ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab90c50e402037b99577f3469af5e1d507b3b9a00a23b3f2ee603c826a27cd30e58e9c9a00
 ```
 
+
+## GET /balance
+### respose
+```json
+{
+    "result":true,
+    "data":{
+        "IOTA":"100",
+        "SMR":"1000"
+    }
+}
+```
+
 ## GET /order/swap
 ### request params
-|name|type|description|
-|---|:--:|---|
-|source|string|source coin's name|
-|target|string|target coin's name|
-|to|string|address of 'target' to send|
-|amount|int256|amount of 'source'|
-|min_amount|int256|min amount of 'target'|
+| name       |  type  | description                 |
+| ---------- | :----: | --------------------------- |
+| source     | string | source coin's name          |
+| target     | string | target coin's name          |
+| to         | string | address of 'target' to send |
+| amount     | int256 | amount of 'source'          |
+| min_amount | int256 | min amount of 'target'      |
 ### respose
 ```json
 {
@@ -103,9 +115,9 @@ ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab9
     }
 }
 ```
-|name|type|description|
-|---|:--:|---|
-|state|int|0:pending, 1:finished, 2:backing, 3:failed, 4:cancel. 1, 3 and 4 id the end state|
+| name  | type  | description                                                                       |
+| ----- | :---: | --------------------------------------------------------------------------------- |
+| state |  int  | 0:pending, 1:finished, 2:backing, 3:failed, 4:cancel. 1, 3 and 4 id the end state |
 
 ## GET /order/swap/cancel cancel the swap order which is pending
 ### respose
@@ -156,19 +168,19 @@ ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab9
     }
 }
 ```
-|name|type|description|
-|---|:--:|---|
-|state|int|0:pending, 1:finished, 2:backing, 3:failed, 4:cancel. 1, 3 and 4 id the end state|
+| name  | type  | description                                                                       |
+| ----- | :---: | --------------------------------------------------------------------------------- |
+| state |  int  | 0:pending, 1:finished, 2:backing, 3:failed, 4:cancel. 1, 3 and 4 id the end state |
 
 
 
 ## GET /order/coin/collect
 ### request params
-|name|type|description|
-|---|:--:|---|
-|account|string|user's IOTA address|
-|coin|string|name of coin that will be collected|
-|amount|string|amount of collect|
+| name    |  type  | description                         |
+| ------- | :----: | ----------------------------------- |
+| account | string | user's IOTA address                 |
+| coin    | string | name of coin that will be collected |
+| amount  | string | amount of collect                   |
 ### respose
 ```json
 {
@@ -178,43 +190,35 @@ ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab9
 
 ## GET /order/coin/retrieve
 ### request params
-|name|type|description|
-|---|:--:|---|
-|to|string|to address|
-|coin|string|coin's name for retrieving|
-|amount|string|amount for retrieving|
+| name   |  type  | description                |
+| ------ | :----: | -------------------------- |
+| to     | string | to address                 |
+| coin   | string | coin's name for retrieving |
+| amount | string | amount for retrieving      |
 ### respose
 ```json
 {
     "result":true,
-    "id":"1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8"
+    "data":1
 }
 ```
 
-
-
-## GET /order/coin/pending get the coin order which is pending
+## GET /order/coin/pending get the collect coin order pending
 ### respose
 ```json
 {
     "result":true,
     "data":{
-        "account":"",
-        "address":"",
+        "account":"the address of IOTA",
+        "from":"from address",
         "coin":"",
         "amount":"",
-        "direction":1,
         "o_time":1654418280,
     }
 }
 ```
-|name|type|description|
-|---|:--:|---|
-|account|string|the address of IOTA|
-|address|string|from address when direction=1 and to address when direction=-1|
-|direction|int|1: collect, -1: retrieve|
 
-## GET /order/coin/cancel cancel the coin order which is pending
+## GET /order/coin/cancel cancel the collect coin order which is pending
 ### respose
 ```json
 {
@@ -262,11 +266,11 @@ ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab9
 
 ## GET /order/liquidity/add
 ### request params
-|name|type|description|
-|---|:--:|---|
-|coin1|string|name of coin1, default IOTA|
-|coin2|string|name of coin2|
-|amount|string|amount for coin1|
+| name    |  type  | description                 |
+| ------- | :----: | --------------------------- |
+| coin1   | string | name of coin1, default IOTA |
+| coin2   | string | name of coin2               |
+| amount1 | string | amount for coin1            |
 ### respose
 ```json
 {
@@ -276,23 +280,20 @@ ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab9
 
 ## GET /order/liquidity/remove
 ### request params
-|name|type|description|
-|---|:--:|---|
-|coin1|string|name of coin1, default IOTA|
-|coin2|string|name of coin2|
-|lp|string|amount of lp token|
+| name  |  type  | description                 |
+| ----- | :----: | --------------------------- |
+| coin1 | string | name of coin1, default IOTA |
+| coin2 | string | name of coin2               |
+| lp    | string | amount of lp token          |
 ### respose
 ```json
 {
     "result":true,
-    "id":"1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8"
+    "data":1
 }
 ```
 
-## GET /order/liquidity/cancel cancel liquidity order which is pending
-### request params
-|name|type|description|
-|---|:--:|---|
+## GET /order/liquidity/cancel cancel liquidity add order which is pending
 ### respose
 ```json
 {
@@ -300,7 +301,7 @@ ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab9
 }
 ```
 
-## GET /order/liquidity/pending get the liquidity order which is pending
+## GET /order/liquidity/pending get the liquidity add order which is pending
 ### respose
 ```json
 {
@@ -310,14 +311,13 @@ ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab9
         "coin1":"",
         "coin2":"",
         "amount1":"",
-        "direction":1,
         "o_time":1654418280
     }
 }
 ```
-|name|type|description|
-|---|:--:|---|
-|amount1|string|coin1's amount when direction=1, lp token's amount when direction=-1|
+| name    |  type  | description                                                          |
+| ------- | :----: | -------------------------------------------------------------------- |
+| amount1 | string | coin1's amount when direction=1, lp token's amount when direction=-1 |
 
 ## GET /order/liquidity/list?count={5} get liquidity orders that had been dealed
 ### respose
@@ -370,8 +370,8 @@ ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab9
     "err_msg":"sign error"
 }
 ```
-|code|description|
-|---|:---|
-|1|sige error|
-|2|params error|
-|3|system error|
+| code | description  |
+| ---- | :----------- |
+| 1    | sige error   |
+| 2    | params error |
+| 3    | system error |

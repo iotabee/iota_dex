@@ -32,8 +32,13 @@ func InitRouter() *gin.Engine {
 	public := api.Group("/public")
 	{
 		public.GET("/pairs", GetPairs)
-		public.GET("/price", GetPrice)
-		public.GET("/balance", GetBalance)
+		public.GET("/pair", GetPair)
+		public.GET("/coin", GetCoin)
+	}
+
+	balance := api.Group("/balance").Use(VerifySignature)
+	{
+		balance.GET("", GetBalance)
 	}
 
 	order := api.Group("/order")
