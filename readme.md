@@ -55,20 +55,29 @@
 
 # sign api
 
-## A example for sign data with the private key
+## Examples for sign data with the private key
+
+### For EVM
 ```go
-    privateKey, err := crypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
-	data := []byte("1655714635") //
+    privateKey, _ := crypto.HexToECDSA("fad9c8855b740a0b7ed4c221dbad0f33a83a49cad6b3fe8d5817ac83d38b6a19")
+	data := []byte("1655714635")
 	hash := crypto.Keccak256Hash(data)
-	signature, err := crypto.Sign(hash.Bytes(), privateKey)
-	sign := hexutil.Encode(signature)
+	signature, _ := crypto.Sign(hash.Bytes(), privateKey)
+	t.Log(hexutil.Encode(signature))
 	//0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab90c50e402037b99577f3469af5e1d507b3b9a00a23b3f2ee603c826a27cd30e58e9c9a00
+```
+### For IOTA
+```go
+    privateKey, _ := hex.DecodeString("4f4b376e64ac07fab72e76d79bfe8b958541f366887d3a595dcbe971680f0ad2e30c1f106286bd8f2258d326a91ea3b54c8360f1bc99cbfab512538a88bbd17d")
+	data := []byte("1655714635")
+	sig := ed25519.Sign(privateKey, data)
+	t.Log(hex.EncodeToString(sig))
+    //76bb36589db473bb43766677b49e24020d8d97338f168def1e34ab9ff630f361ce3bdf4ca4f85cdf4fc63b4fbdacbd65572697a608275663d9763a3b254ba60a
 ```
 Every private api must add the ts and sign params.
 ```
-ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab90c50e402037b99577f3469af5e1d507b3b9a00a23b3f2ee603c826a27cd30e58e9c9a00
+address={if evm, the wallet address; if iota, it is public key}&ts=1655714635&sign={the sign}
 ```
-
 
 ## GET /balance
 ### respose
@@ -375,3 +384,4 @@ ts=1655714635&sign=0x930b692f4b3117d4f7e5640b6d19b383f29046ef6ffd38fe0c221065ab9
 | 1    | sige error   |
 | 2    | params error |
 | 3    | system error |
+
