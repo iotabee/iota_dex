@@ -74,7 +74,7 @@
 	t.Log(hex.EncodeToString(sig))
     //76bb36589db473bb43766677b49e24020d8d97338f168def1e34ab9ff630f361ce3bdf4ca4f85cdf4fc63b4fbdacbd65572697a608275663d9763a3b254ba60a
 ```
-Every private api must add the ts and sign params.
+Every private api must add the address, ts and sign params.
 ```
 address={if evm, the wallet address; if iota, it is public key}&ts=1655714635&sign={the sign}
 ```
